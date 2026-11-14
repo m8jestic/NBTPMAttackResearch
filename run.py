@@ -162,7 +162,6 @@ def calculate_mutual_information(binary_a, binary_b):
     return float(np.clip(mi, 0.0, 1.0))
 
 
-
 def get_parameter_sets_for_key_length(target_key_length=8192, bits_min=1, bits_max=13):
     parameter_sets = []
     for Bits in range(bits_min, bits_max + 1):
@@ -193,6 +192,7 @@ def _update_eve(TPM_E, X, out_A, out_B, out_E, attack):
     if attack == "naive":
         if out_A == out_E:
             TPM_E.update(X, out_A)
+
     elif attack == "geometric":
         if out_A == out_B:
             if out_E != out_A:
@@ -201,6 +201,7 @@ def _update_eve(TPM_E, X, out_A, out_B, out_E, attack):
                 TPM_E.sigma[neuron] *= -1
                 TPM_E.tau = np.prod(TPM_E.sigma)
             TPM_E.update(X, out_A)
+
     else:
         if out_A == out_E:
             TPM_E.update(X, out_A)
@@ -283,12 +284,12 @@ def _measure_chunk(args):
                 TPM_A.update(X, out_B)
                 TPM_B.update(X, out_A)
 
-                if leakage_enabled:
-                    if disclose_one_bit_to_eve(
-                        keySlice_A, eve_key_estimate, [TPM_E], Bits
-                    ):
-                        leaked_bits_count += 1
-                        out_E = TPM_E.compute_output(X)
+            if leakage_enabled:
+                if disclose_one_bit_to_eve(
+                    keySlice_A, eve_key_estimate, [TPM_E], Bits
+                ):
+                    leaked_bits_count += 1
+                    out_E = TPM_E.compute_output(X)
 
             _update_eve(TPM_E, X, out_A, out_B, out_E, eve_attack)
 
@@ -801,11 +802,11 @@ def _robustness_measure_chunk(args):
                 TPM_A.update(X, out_B)
                 TPM_B.update(X, out_A)
 
-                if leakage_enabled and disclose_one_bit_to_eve(
-                    keySlice_A, eve_key_estimate, [TPM_E], Bits
-                ):
-                    leaked_bits_count += 1
-                    out_E = TPM_E.compute_output(X)
+            if leakage_enabled and disclose_one_bit_to_eve(
+                keySlice_A, eve_key_estimate, [TPM_E], Bits
+            ):
+                leaked_bits_count += 1
+                out_E = TPM_E.compute_output(X)
 
             _update_eve(TPM_E, X, out_A, out_B, out_E, eve_attack)
 
