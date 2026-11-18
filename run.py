@@ -301,9 +301,7 @@ def _measure_chunk(args):
                 first_sync_ab = iter_
                 fact_sync_iterations_sum += iter_
                 sync_iterations_sum += iter_
-                disclosed_information_sum += math.log(
-                    2 ** iter_, 2 * L_local
-                )
+                disclosed_information_sum += 2 * iter_
 
             if first_sync_ab is None and iter_ == max_iterations:
                 failures += 1
@@ -555,7 +553,7 @@ def measure_single_parameter_set_parallel(K, N, Bits, M=None, kStart=1, kLimit=5
         eve_average_metrics[eve_attack]["mutual_information"]
     )
 
-    correlation_df = pd.DataFrame(correlation_data)
+
     mutual_information_df = pd.DataFrame(mutual_information_data)
 
     eve_metrics = eve_average_metrics[eve_attack]
@@ -594,11 +592,8 @@ def measure_single_parameter_set_parallel(K, N, Bits, M=None, kStart=1, kLimit=5
         f"leakage={leakage_tag},security.xlsx"
     )
     with pd.ExcelWriter(output_file, engine="openpyxl") as writer:
-        correlation_df.to_excel(writer, sheet_name="Correlation", index=False)
+
         summary_df.to_excel(writer, sheet_name="Summary", index=False)
-        mutual_information_df.to_excel(
-            writer, sheet_name="MutualInformation", index=False
-        )
 
     if verbose:
         print(
@@ -654,15 +649,17 @@ def measure_single_parameter_set_parallel(K, N, Bits, M=None, kStart=1, kLimit=5
 
 def create_key_with_share(source_key, share):
     source_key = np.asarray(source_key, dtype=int)
-    if not 0.0 <= share <= 1.0:
-        raise ValueError("share должен находиться в диапазоне от 0 до 1")
-
     n = len(source_key)
     share_count = int(round(n * share))
-    result = 1 - source_key
+
+    result = rnd.randint(0, 2, size=n)
 
     if share_count > 0:
-        shared_positions = rnd.choice(n, size=share_count, replace=False)
+        shared_positions = rnd.choice(
+            n,
+            size=share_count,
+            replace=False
+        )
         result[shared_positions] = source_key[shared_positions]
 
     return result
@@ -736,7 +733,6 @@ def _robustness_measure_chunk(args):
 
     n_local = K * N * Bits
     L_local = (2 ** Bits) // 2
-    active_attacks = _active_attack_names(eve_attack)
     results = []
 
     for local_trial in range(measurements_chunk):
@@ -1018,7 +1014,6 @@ def measure_robustness_experiment_parallel(
 
     with pd.ExcelWriter(filename, engine="openpyxl") as writer:
         for current_M in range(1, M + 1):
-            m_trial_results = []
             m_summary_results = []
 
             for scenario, fractions in rounds:
@@ -1037,10 +1032,6 @@ def measure_robustness_experiment_parallel(
                         leakage_enabled=leakage_enabled,
                     )
 
-                    for row in results:
-                        row["round"] = round_number
-                    m_trial_results.extend(results)
-
                     summary_row = _summarize_robustness_round(
                         results, K, N, Bits, current_M, scenario,
                         round_number, shared_fraction, eve_attack
@@ -1057,26 +1048,9 @@ def measure_robustness_experiment_parallel(
                             f"experiments={len(results)}"
                         )
 
-            trials_df = pd.DataFrame(m_trial_results)
             summary_df = pd.DataFrame(m_summary_results)
             sheet_name = f"M_{current_M}"
-
-            trials_df.to_excel(
-                writer, sheet_name=sheet_name, index=False, startrow=0
-            )
-            worksheet = writer.sheets[sheet_name]
-            summary_title_row = len(trials_df) + 3
-            worksheet.cell(
-                row=summary_title_row,
-                column=1,
-                value="Summary"
-            )
-            summary_df.to_excel(
-                writer,
-                sheet_name=sheet_name,
-                index=False,
-                startrow=summary_title_row
-            )
+            summary_df.to_excel(writer, sheet_name=sheet_name, index=False)
 
     summary_all_df = pd.DataFrame(all_summary_results)
 
@@ -1219,14 +1193,13 @@ def main():
     print("\nВыберите вариант моделирования Евы:")
     print("1. Наивная синхронизация")
     print("2. Геометрическая атака")
-    print("3. Наивная синхронизация и геометрическая атака (одна Ева)")
-    attack_choices = {"1": "naive", "2": "geometric", "3": "both"}
+    attack_choices = {"1": "naive", "2": "geometric"}
     while True:
-        choice = input("Введите номер варианта (1-3): ").strip()
+        choice = input("Введите номер варианта (1-2): ").strip()
         if choice in attack_choices:
             eve_attack = attack_choices[choice]
             break
-        print("Ошибка: выберите 1, 2 или 3.")
+        print("Ошибка: выберите 1-2.")
 
     print("\nПараметры запуска:")
     print(f"b={Bits}, N={N}, K={K}, F={F}, L={L_local}, M={M}")
